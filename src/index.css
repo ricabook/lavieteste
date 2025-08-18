@@ -1,0 +1,153 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Chocolate & Confectionery Palette */
+    --background: 35 20% 97%;
+    --foreground: 25 25% 15%;
+
+    --card: 35 25% 98%;
+    --card-foreground: 25 25% 15%;
+
+    --popover: 35 25% 98%;
+    --popover-foreground: 25 25% 15%;
+
+    /* Rich chocolate brown as primary */
+    --primary: 25 40% 25%;
+    --primary-foreground: 35 25% 98%;
+
+    /* Warm cream as secondary */
+    --secondary: 35 25% 92%;
+    --secondary-foreground: 25 40% 25%;
+
+    --muted: 35 20% 94%;
+    --muted-foreground: 25 15% 45%;
+
+    /* Golden accent for elegance */
+    --accent: 45 85% 65%;
+    --accent-foreground: 25 40% 25%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 35 25% 98%;
+
+    --border: 35 20% 88%;
+    --input: 35 20% 95%;
+    --ring: 25 40% 25%;
+
+    --radius: 0.75rem;
+
+    /* Custom chocolate theme colors */
+    --chocolate-dark: 25 50% 20%;
+    --chocolate-medium: 25 40% 35%;
+    --chocolate-light: 25 30% 55%;
+    --chocolate-milk: 35 25% 75%;
+    
+    /* Golden tones */
+    --gold-light: 45 75% 75%;
+    --gold-medium: 45 85% 65%;
+    --gold-dark: 45 65% 45%;
+    
+    /* Cream and whites */
+    --cream-light: 35 30% 96%;
+    --cream-medium: 35 25% 92%;
+    --cream-dark: 35 20% 85%;
+
+    /* Gradients */
+    --gradient-chocolate: linear-gradient(135deg, hsl(var(--chocolate-dark)), hsl(var(--chocolate-medium)));
+    --gradient-gold: linear-gradient(135deg, hsl(var(--gold-medium)), hsl(var(--gold-light)));
+    --gradient-cream: linear-gradient(180deg, hsl(var(--cream-light)), hsl(var(--cream-medium)));
+
+    /* Shadows */
+    --shadow-elegant: 0 10px 30px -10px hsl(var(--chocolate-dark) / 0.2);
+    --shadow-glow: 0 0 20px hsl(var(--gold-medium) / 0.3);
+
+    /* Animations */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-elegant: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    /* Dark chocolate theme */
+    --background: 25 30% 8%;
+    --foreground: 35 25% 95%;
+
+    --card: 25 25% 12%;
+    --card-foreground: 35 25% 95%;
+
+    --popover: 25 25% 12%;
+    --popover-foreground: 35 25% 95%;
+
+    --primary: 45 75% 75%;
+    --primary-foreground: 25 30% 8%;
+
+    --secondary: 25 20% 20%;
+    --secondary-foreground: 35 25% 95%;
+
+    --muted: 25 15% 18%;
+    --muted-foreground: 35 15% 65%;
+
+    --accent: 45 85% 65%;
+    --accent-foreground: 25 30% 8%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 35 25% 95%;
+
+    --border: 25 15% 22%;
+    --input: 25 15% 18%;
+    --ring: 45 75% 75%;
+
+    /* Dark theme chocolate colors */
+    --chocolate-dark: 25 40% 15%;
+    --chocolate-medium: 25 35% 25%;
+    --chocolate-light: 25 30% 40%;
+    --chocolate-milk: 35 20% 60%;
+    
+    --gold-light: 45 70% 70%;
+    --gold-medium: 45 80% 60%;
+    --gold-dark: 45 60% 40%;
+    
+    --cream-light: 35 15% 25%;
+    --cream-medium: 35 12% 20%;
+    --cream-dark: 35 10% 15%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
