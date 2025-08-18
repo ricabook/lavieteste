@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import useAuth from "@/hooks/useAuth";
-import { useGerarImagemBombom } from "@/hooks/useGerarImagemBombom"; // Importação do hook
 
 interface Selection {
   chocolate?: { id: string; nome: string };
@@ -19,12 +18,11 @@ interface PreviewAreaProps {
 }
 
 const PreviewArea = ({ selection }: PreviewAreaProps) => {
-  const [isSending, setIsSending] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [imageDataUrl, setImageDataUrl] = useState<string | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
-  
-  // Usando o hook de geração de imagem
-  const { gerar, loading: isGeneratingImage, dataUrl, error } = useGerarImagemBombom();
 
   const generatePrompt = () => {
     if (!selection.chocolate || !selection.base || !selection.ganache || !selection.cor) {
@@ -40,13 +38,7 @@ const PreviewArea = ({ selection }: PreviewAreaProps) => {
     prompt += `. Casquinha externa pintada de ${selection.cor.nome}.`;
     prompt += ` O bombom deve ser fotorrealista, com o chocolate escolhido visível no interior. A pintura colorida deve estar apenas na casquinha externa.`;
     
-    return {
-      corCasquinha: selection.cor.nome,
-      tipoChocolate: selection.chocolate.nome,
-      base: selection.base.nome,
-      ganache: selection.ganache.nome,
-      geleia: selection.geleia?.nome
-    };
+    return prompt;
   };
 
   const handleSendToProduction = async () => {
@@ -68,7 +60,7 @@ const PreviewArea = ({ selection }: PreviewAreaProps) => {
       return;
     }
 
-    setIsSending(true);
+    setIsGenerating(true);
     
     try {
       const prompt = generatePrompt();
@@ -102,7 +94,7 @@ const PreviewArea = ({ selection }: PreviewAreaProps) => {
         variant: "destructive",
       });
     } finally {
-      setIsSending(false);
+      setIsGenerating(false);
     }
   };
 
@@ -115,16 +107,63 @@ const PreviewArea = ({ selection }: PreviewAreaProps) => {
       });
       return;
     }
+
+    setIsGeneratingImage(true);
     
-    const selecaoGeracao = {
-      corCasquinha: selection.cor.nome,
-      tipoChocolate: selection.chocolate.nome,
-      base: selection.base.nome,
-      ganache: selection.ganache.nome,
-      geleia: selection.geleia?.nome
-    };
-    
-    await gerar(selecaoGeracao);
+    try {
+      const prompt = generatePrompt();
+      if (!prompt) {
+        throw new Error("Prompt inválido");
+      }
+
+      // Chama nossa função serverless que proxya a Stability.ai
+      const resp = await fetch('/api/stability/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, aspect_ratio: '1:1', output_format: 'png' }),
+      });
+
+      if (!resp.ok) {
+        const text = await resp.text().catch(() => '');
+        let parsed: any = null;
+        try { parsed = JSON.parse(text); } catch {}
+        const error = parsed?.error || text || `HTTP ${resp.status}`;
+        throw new Error(error || 'Falha ao gerar imagem');
+      }
+
+      const raw = await resp.text();
+      let data: any;
+      try { data = JSON.parse(raw); } catch {
+        throw new Error(raw?.slice(0, 200) || 'Resposta não-JSON do servidor');
+      }
+      if (!data?.dataUrl) {
+        throw new Error(data?.error || 'Resposta inválida da API de imagens');
+      }
+      setImageDataUrl(data.dataUrl);
+
+      toast({
+        title: "Imagem gerada!",
+        description: "A imagem do seu bombom foi gerada com sucesso.",
+      });
+    } catch (error) {
+      console.error("Error generating image:", error);
+      toast({
+        title: "Erro",
+        description: "Ocorreu um erro ao gerar a imagem. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingImage(false);
+    }catch (error) {
+      console.error("Error generating image:", error);
+      toast({
+        title: "Erro",
+        description: "Ocorreu um erro ao gerar a imagem. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingImage(false);
+    }
   };
 
   return (
@@ -135,39 +174,16 @@ const PreviewArea = ({ selection }: PreviewAreaProps) => {
           <CardTitle>Preview do Bombom</CardTitle>
         </CardHeader>
         <CardContent>
-          {isGeneratingImage ? (
-            <div className="bg-gradient-to-br from-background to-muted rounded-lg h-64 flex items-center justify-center border-2 border-dashed border-border">
-              <div className="text-center text-muted-foreground">
-                <p>Gerando imagem...</p>
-              </div>
-            </div>
-          ) : dataUrl ? (
-            <img 
-              src={dataUrl} 
-              alt="Bombom gerado por IA" 
-              className="rounded-xl shadow-md max-w-full h-auto"
-            />
-          ) : error ? (
-            <div className="bg-red-100 rounded-lg p-4 h-64 flex items-center justify-center border-2 border-dashed border-red-400">
-              <p className="text-red-600 text-center">{error}</p>
-            </div>
-          ) : (
-            <div className="bg-gradient-to-br from-background to-muted rounded-lg h-64 flex items-center justify-center border-2 border-dashed border-border">
+          <div className="bg-gradient-to-br from-background to-muted rounded-lg h-64 flex items-center justify-center border-2 border-dashed border-border">
+            {imageDataUrl ? (
+              <img src={imageDataUrl} alt="Preview do Bombom" className="max-h-[380px] w-auto object-contain rounded-md" />
+            ) : (
               <div className="text-center text-muted-foreground">
                 <div className="text-6xl mb-2">🍫</div>
                 <p>Sua criação aparecerá aqui</p>
               </div>
-            </div>
-          )}
-          {dataUrl && (
-            <a
-              href={dataUrl}
-              download="bombom.png"
-              className="inline-block mt-3 text-sm underline"
-            >
-              Baixar imagem
-            </a>
-          )}
+            )}
+          </div>
         </CardContent>
       </Card>
 
@@ -214,9 +230,9 @@ const PreviewArea = ({ selection }: PreviewAreaProps) => {
               size="lg"
               variant="outline"
               onClick={handleSendToProduction}
-              disabled={isSending || !user}
+              disabled={isGenerating || !user}
             >
-              {isSending ? "Enviando..." : "Enviar para Produção"}
+              {isGenerating ? "Enviando..." : "Enviar para Produção"}
             </Button>
           </div>
         </CardContent>

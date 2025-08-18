@@ -1,59 +1,88 @@
-import { VercelRequest, VercelResponse } from '@vercel/node';
-import { Blob } from 'buffer';
+// Edge Runtime function (ESM) - /api/stability/generate.ts
+export const runtime = 'edge';
 
-// Importe as dependências necessárias
-const { STABILITY_API_KEY } = process.env;
+const API_HOST = 'https://api.stability.ai';
+const ENDPOINT = '/v2beta/stable-image/generate/sd3';
 
-const engineId = "stable-diffusion-3-medium";
-const apiHost = "https://api.stability.ai";
-
-export default async function (req: VercelRequest, res: VercelResponse) {
-  if (!STABILITY_API_KEY) {
-    return res.status(500).json({ error: "Missing Stability API key." });
+export default async function handler(req: Request) {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, {
+      status: 204,
+      headers: corsHeaders(),
+    });
   }
-
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: "Method not allowed. Use POST." });
-  }
-
-  const { prompt, negativePrompt, aspectRatio, outputFormat, model } = req.body;
-
-  if (!prompt) {
-    return res.status(400).json({ error: "Missing 'prompt' in request body." });
+    return json({ error: 'Method not allowed' }, 405);
   }
 
   try {
-    const response = await fetch(`${apiHost}/v2beta/stable-image/generate/${model || engineId}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "image/*",
-        Authorization: `Bearer ${STABILITY_API_KEY}`,
-      },
-      body: JSON.stringify({
-        prompt,
-        negative_prompt: negativePrompt,
-        aspect_ratio: aspectRatio,
-        output_format: outputFormat,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      return res.status(response.status).json({ error: errorText || "Failed to generate image." });
+    const apiKey = process.env.STABILITY_API_KEY;
+    if (!apiKey) {
+      return json({ error: 'Missing STABILITY_API_KEY' }, 500);
     }
 
-    const blob = await response.blob();
-    const dataUrl = await new Promise<string>((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
-      reader.readAsDataURL(blob);
+    let body: any = {};
+    try {
+      body = await req.json();
+    } catch {
+      body = {};
+    }
+
+    const prompt = body?.prompt as string;
+    const aspect_ratio = (body?.aspect_ratio as string) || '1:1';
+    const mode = (body?.mode as string) || 'text-to-image';
+    const output_format = (body?.output_format as string) || 'png';
+
+    if (!prompt || prompt.trim().length < 10) {
+      return json({ error: 'Invalid or missing "prompt".' }, 400);
+    }
+
+    const form = new FormData();
+    form.append('prompt', prompt);
+    form.append('mode', mode);
+    form.append('aspect_ratio', aspect_ratio);
+
+    const accept =
+      output_format === 'jpeg' ? 'image/jpeg' :
+      output_format === 'webp' ? 'image/webp' : 'image/png';
+
+    const upstream = await fetch(`${API_HOST}${ENDPOINT}`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        Accept: accept,
+      },
+      body: form,
     });
 
-    res.setHeader("Content-Type", "application/json");
-    res.status(200).json({ dataUrl });
-  } catch (error) {
-    console.error("Error generating image:", error);
-    res.status(500).json({ error: `Internal Server Error: ${error}` });
+    if (!upstream.ok) {
+      const text = await upstream.text();
+      return json({ error: text || `Stability error ${upstream.status}` }, upstream.status);
+    }
+
+    const arrayBuf = await upstream.arrayBuffer();
+    const b64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuf)));
+
+    return json({ dataUrl: `data:${accept};base64,${b64}` });
+  } catch (err: any) {
+    return json({ error: err?.message ?? 'Unknown error' }, 500);
   }
+}
+
+function json(obj: any, status = 200) {
+  return new Response(JSON.stringify(obj), {
+    status,
+    headers: {
+      'content-type': 'application/json; charset=utf-8',
+      ...corsHeaders(),
+    },
+  });
+}
+
+function corsHeaders() {
+  return {
+    'access-control-allow-origin': '*',
+    'access-control-allow-methods': 'POST, OPTIONS',
+    'access-control-allow-headers': 'Content-Type, Authorization',
+  };
 }

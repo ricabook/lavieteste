@@ -1,0 +1,99 @@
+// Vercel Serverless Function (Node runtime)
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+
+const API_HOST = 'https://api.stability.ai';
+const ENDPOINT = '/v2beta/stable-image/generate/sd3';
+
+function buildMultipart(fields: Record<string, string>) {
+  const boundary = '----stability-boundary-' + Math.random().toString(16).slice(2);
+  const lines: string[] = [];
+  for (const [k, v] of Object.entries(fields)) {
+    lines.push(`--${boundary}`);
+    lines.push(`Content-Disposition: form-data; name="${k}"`);
+    lines.push('');
+    lines.push(v);
+  }
+  lines.push(`--${boundary}--`);
+  const body = lines.join('\r\n');
+  return { body, boundary };
+}
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Basic CORS for local testing / other origins
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  if (req.method === 'OPTIONS') {
+    res.status(204).end();
+    return;
+  }
+
+  if (req.method !== 'POST') {
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.status(405).json({ error: 'Method not allowed' });
+    return;
+  }
+
+  try {
+    const apiKey = process.env.STABILITY_API_KEY;
+    if (!apiKey) {
+      res.setHeader('Content-Type', 'application/json; charset=utf-8');
+      res.status(500).json({ error: 'Missing STABILITY_API_KEY' });
+      return;
+    }
+
+    const bodyAny: any = typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {};
+    const prompt: string = bodyAny?.prompt;
+    const aspect_ratio: string = bodyAny?.aspect_ratio || '1:1';
+    const mode: string = bodyAny?.mode || 'text-to-image';
+    const output_format: string = bodyAny?.output_format || 'png';
+
+    if (!prompt || typeof prompt !== 'string' || prompt.trim().length < 10) {
+      res.setHeader('Content-Type', 'application/json; charset=utf-8');
+      res.status(400).json({ error: 'Invalid or missing "prompt".' });
+      return;
+    }
+
+    const { body, boundary } = buildMultipart({
+      prompt,
+      mode,
+      aspect_ratio,
+      // If you want to influence output encoding, include output_format here
+      // output_format,
+    });
+
+    const accept =
+      output_format === 'jpeg'
+        ? 'image/jpeg'
+        : output_format === 'webp'
+        ? 'image/webp'
+        : 'image/png';
+
+    const upstream = await fetch(`${API_HOST}${ENDPOINT}`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        Accept: accept,
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+      },
+      body,
+    });
+
+    if (!upstream.ok) {
+      const text = await upstream.text();
+      res.setHeader('Content-Type', 'application/json; charset=utf-8');
+      res.status(upstream.status).json({ error: text || `Stability error ${upstream.status}` });
+      return;
+    }
+
+    const arrayBuf = await upstream.arrayBuffer();
+    const base64 = Buffer.from(arrayBuf).toString('base64');
+    const mime = accept;
+
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.status(200).json({ dataUrl: `data:${mime};base64,${base64}` });
+  } catch (err: any) {
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.status(500).json({ error: err?.message ?? 'Unknown error' });
+  }
+}

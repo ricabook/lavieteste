@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { buildBombomPrompt, BombomOpcao } from '../lib/buildBombomPrompt';
 
@@ -34,28 +35,10 @@ export function useGerarImagemBombom() {
         }),
       });
 
-      if (!res.ok) {
-        // Trata erros de resposta do servidor
-        let errorMessage = 'Falha ao gerar imagem';
-        const contentType = res.headers.get('content-type');
-        
-        // Se a resposta for JSON, tenta extrair a mensagem de erro
-        if (contentType && contentType.indexOf('application/json') !== -1) {
-          const json = await res.json();
-          errorMessage = json?.error || errorMessage;
-        } else {
-          // Se não for JSON, lê o corpo da resposta como texto
-          errorMessage = await res.text();
-        }
-        
-        throw new Error(errorMessage);
-      }
-
-      // Se a resposta foi bem-sucedida, processa como JSON
       const json = await res.json();
+      if (!res.ok) throw new Error(json?.error || 'Falha ao gerar imagem');
       setDataUrl(json.dataUrl);
       return json.dataUrl as string;
-      
     } catch (e: any) {
       setError(e?.message ?? 'Erro ao gerar imagem');
       return null;

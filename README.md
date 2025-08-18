@@ -71,3 +71,12 @@ Yes, you can!
 To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
 Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+
+## Geração de Imagens (Stability.ai)
+
+1. Crie um arquivo `.env` na raiz com:
+```
+STABILITY_API_KEY=SEU_TOKEN_DA_STABILITY
+```
+2. Faça deploy no Vercel (ou rode local com `bun dev`/`npm run dev`). A função serverless está em `api/stability/generate.ts`.
+3. No app, selecione as opções e clique em **Gerar Imagem do Bombom**. A imagem aparecerá no card **Preview do Bombom**.
