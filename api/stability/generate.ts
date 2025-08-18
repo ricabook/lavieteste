@@ -1,4 +1,5 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
+import { Blob } from 'buffer'; // Importe Blob, que é parte do Node.js v16+
 
 // Importe as dependências necessárias
 const { STABILITY_API_KEY } = process.env;
@@ -6,6 +7,7 @@ const { STABILITY_API_KEY } = process.env;
 const engineId = "stable-diffusion-3-medium";
 const apiHost = "https://api.stability.ai";
 
+// Altere a exportação para 'export default' para usar a sintaxe de Módulo ES
 export default async function (req: VercelRequest, res: VercelResponse) {
   if (!STABILITY_API_KEY) {
     return res.status(500).json({ error: "Missing Stability API key." });
