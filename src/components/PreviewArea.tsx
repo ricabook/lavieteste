@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import useAuth from "@/hooks/useAuth";
+import { useGerarImagemBombom } from "@/hooks/useGerarImagemBombom"; // Importação do hook
 
 interface Selection {
   chocolate?: { id: string; nome: string };
@@ -18,10 +19,12 @@ interface PreviewAreaProps {
 }
 
 const PreviewArea = ({ selection }: PreviewAreaProps) => {
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [isSending, setIsSending] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
+  
+  // Usando o hook de geração de imagem
+  const { gerar, loading: isGeneratingImage, dataUrl, error } = useGerarImagemBombom();
 
   const generatePrompt = () => {
     if (!selection.chocolate || !selection.base || !selection.ganache || !selection.cor) {
@@ -37,7 +40,13 @@ const PreviewArea = ({ selection }: PreviewAreaProps) => {
     prompt += `. Casquinha externa pintada de ${selection.cor.nome}.`;
     prompt += ` O bombom deve ser fotorrealista, com o chocolate escolhido visível no interior. A pintura colorida deve estar apenas na casquinha externa.`;
     
-    return prompt;
+    return {
+      corCasquinha: selection.cor.nome,
+      tipoChocolate: selection.chocolate.nome,
+      base: selection.base.nome,
+      ganache: selection.ganache.nome,
+      geleia: selection.geleia?.nome
+    };
   };
 
   const handleSendToProduction = async () => {
@@ -59,7 +68,7 @@ const PreviewArea = ({ selection }: PreviewAreaProps) => {
       return;
     }
 
-    setIsGenerating(true);
+    setIsSending(true);
     
     try {
       const prompt = generatePrompt();
@@ -93,7 +102,7 @@ const PreviewArea = ({ selection }: PreviewAreaProps) => {
         variant: "destructive",
       });
     } finally {
-      setIsGenerating(false);
+      setIsSending(false);
     }
   };
 
@@ -106,32 +115,16 @@ const PreviewArea = ({ selection }: PreviewAreaProps) => {
       });
       return;
     }
-
-    setIsGeneratingImage(true);
     
-    try {
-      const prompt = generatePrompt();
-      
-      // TODO: Integrar com API de IA para gerar imagem
-      console.log("Prompt para geração de imagem:", prompt);
-      
-      // Simular processamento por enquanto
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      toast({
-        title: "Imagem gerada!",
-        description: "A imagem do seu bombom foi gerada com sucesso.",
-      });
-    } catch (error) {
-      console.error("Error generating image:", error);
-      toast({
-        title: "Erro",
-        description: "Ocorreu um erro ao gerar a imagem. Tente novamente.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsGeneratingImage(false);
-    }
+    const selecaoGeracao = {
+      corCasquinha: selection.cor.nome,
+      tipoChocolate: selection.chocolate.nome,
+      base: selection.base.nome,
+      ganache: selection.ganache.nome,
+      geleia: selection.geleia?.nome
+    };
+    
+    await gerar(selecaoGeracao);
   };
 
   return (
@@ -142,12 +135,39 @@ const PreviewArea = ({ selection }: PreviewAreaProps) => {
           <CardTitle>Preview do Bombom</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="bg-gradient-to-br from-background to-muted rounded-lg h-64 flex items-center justify-center border-2 border-dashed border-border">
-            <div className="text-center text-muted-foreground">
-              <div className="text-6xl mb-2">🍫</div>
-              <p>Sua criação aparecerá aqui</p>
+          {isGeneratingImage ? (
+            <div className="bg-gradient-to-br from-background to-muted rounded-lg h-64 flex items-center justify-center border-2 border-dashed border-border">
+              <div className="text-center text-muted-foreground">
+                <p>Gerando imagem...</p>
+              </div>
             </div>
-          </div>
+          ) : dataUrl ? (
+            <img 
+              src={dataUrl} 
+              alt="Bombom gerado por IA" 
+              className="rounded-xl shadow-md max-w-full h-auto"
+            />
+          ) : error ? (
+            <div className="bg-red-100 rounded-lg p-4 h-64 flex items-center justify-center border-2 border-dashed border-red-400">
+              <p className="text-red-600 text-center">{error}</p>
+            </div>
+          ) : (
+            <div className="bg-gradient-to-br from-background to-muted rounded-lg h-64 flex items-center justify-center border-2 border-dashed border-border">
+              <div className="text-center text-muted-foreground">
+                <div className="text-6xl mb-2">🍫</div>
+                <p>Sua criação aparecerá aqui</p>
+              </div>
+            </div>
+          )}
+          {dataUrl && (
+            <a
+              href={dataUrl}
+              download="bombom.png"
+              className="inline-block mt-3 text-sm underline"
+            >
+              Baixar imagem
+            </a>
+          )}
         </CardContent>
       </Card>
 
@@ -194,9 +214,9 @@ const PreviewArea = ({ selection }: PreviewAreaProps) => {
               size="lg"
               variant="outline"
               onClick={handleSendToProduction}
-              disabled={isGenerating || !user}
+              disabled={isSending || !user}
             >
-              {isGenerating ? "Enviando..." : "Enviar para Produção"}
+              {isSending ? "Enviando..." : "Enviar para Produção"}
             </Button>
           </div>
         </CardContent>
