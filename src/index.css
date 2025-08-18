@@ -19,12 +19,12 @@ All colors MUST be HSL.
     --popover-foreground: 25 25% 15%;
 
     /* Rich chocolate brown as primary */
-    --primary: 25 40% 25%;
-    --primary-foreground: 35 25% 98%;
+    --primary: 260 82% 30%;
+    --primary-foreground: 0 0% 100%;
 
     /* Warm cream as secondary */
-    --secondary: 35 25% 92%;
-    --secondary-foreground: 25 40% 25%;
+    --secondary: 352 76% 64%;
+    --secondary-foreground: 0 0% 100%;
 
     --muted: 35 20% 94%;
     --muted-foreground: 25 15% 45%;
@@ -38,7 +38,7 @@ All colors MUST be HSL.
 
     --border: 35 20% 88%;
     --input: 35 20% 95%;
-    --ring: 25 40% 25%;
+    --ring: 260 82% 30%;
 
     --radius: 0.75rem;
 
