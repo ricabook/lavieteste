@@ -1,69 +1,78 @@
+import { VercelRequest, VercelResponse } from '@vercel/node';
 
-// Vercel Serverless Function (Node runtime)
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+// Importe as dependências necessárias
+const {
+  STABILITY_API_KEY
+} = process.env;
 
-const API_HOST = 'https://api.stability.ai';
-const ENDPOINT = '/v2beta/stable-image/generate/sd3';
+const engineId = "stable-diffusion-3-medium";
+const apiHost = "https://api.stability.ai";
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+// Altere a exportação de `exports.default` para `export default`
+export default async function (req: VercelRequest, res: VercelResponse) {
+  if (!STABILITY_API_KEY) {
+    return res.status(500).json({
+      error: "Missing Stability API key."
+    });
+  }
+
   if (req.method !== 'POST') {
-    res.status(405).json({ error: 'Method not allowed' });
-    return;
+    return res.status(405).json({
+      error: "Method not allowed. Use POST."
+    });
+  }
+
+  const {
+    prompt,
+    negativePrompt,
+    aspectRatio,
+    outputFormat,
+    model
+  } = req.body;
+
+  if (!prompt) {
+    return res.status(400).json({
+      error: "Missing 'prompt' in request body."
+    });
   }
 
   try {
-    const apiKey = process.env.STABILITY_API_KEY;
-    if (!apiKey) {
-      res.status(500).json({ error: 'Missing STABILITY_API_KEY' });
-      return;
+    const response = await fetch(
+      `${apiHost}/v2beta/stable-image/generate/${model || engineId}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "image/*",
+          Authorization: `Bearer ${STABILITY_API_KEY}`,
+        },
+        body: JSON.stringify({
+          prompt,
+          negative_prompt: negativePrompt,
+          aspect_ratio: aspectRatio,
+          output_format: outputFormat,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      return res.status(response.status).json({
+        error: errorText || "Failed to generate image."
+      });
     }
 
-    // Body pode vir como string no Vercel em alguns casos
-    const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
-    const {
-      prompt,
-      negativePrompt,
-      aspectRatio = '1:1',
-      outputFormat = 'png',
-      seed,
-      model = 'sd3-medium'
-    } = body;
+    const arrayBuffer = await response.arrayBuffer();
+    const base64 = Buffer.from(arrayBuffer).toString("base64");
+    const dataUrl = `data:image/${outputFormat};base64,${base64}`;
 
-    if (!prompt) {
-      res.status(400).json({ error: 'prompt is required' });
-      return;
-    }
-
-    const upstream = await fetch(`${API_HOST}${ENDPOINT}`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        Accept: 'image/*', // retorna imagem binária
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        prompt,
-        negative_prompt: negativePrompt,
-        aspect_ratio: aspectRatio,     // "1:1" | "4:5" | "3:2" | "16:9" etc.
-        output_format: outputFormat,   // "png" | "jpeg" | "webp"
-        model,                         // "sd3-medium" | "sd3-large" | "sd3-large-turbo"
-        seed,
-      }),
+    res.setHeader("Content-Type", "application/json");
+    res.status(200).json({
+      dataUrl
     });
-
-    if (!upstream.ok) {
-      const text = await upstream.text();
-      res.status(502).json({ error: `Stability error: ${upstream.status} - ${text}` });
-      return;
-    }
-
-    const arrayBuf = await upstream.arrayBuffer();
-    const base64 = Buffer.from(arrayBuf).toString('base64');
-    const mime = outputFormat === 'jpeg' ? 'image/jpeg' :
-                 outputFormat === 'webp' ? 'image/webp' : 'image/png';
-
-    res.status(200).json({ dataUrl: `data:${mime};base64,${base64}` });
-  } catch (err: any) {
-    res.status(500).json({ error: err?.message ?? 'Unknown error' });
+  } catch (error) {
+    console.error("Error generating image:", error);
+    res.status(500).json({
+      error: `Internal Server Error: ${error}`
+    });
   }
 }
