@@ -30,11 +30,9 @@ const PreviewArea = ({ selection }: PreviewAreaProps) => {
       return "";
     }
 
-    // Verifica se há geleia selecionada (e se não é "Sem Geleia")
     const hasGeleia = selection.geleia && selection.geleia.nome !== "Sem Geleia";
     
     if (!hasGeleia) {
-      // Prompt para bombom sem geleia
       return `Gere uma imagem de:
 
 Bombom de ${selection.chocolate.nome}, com ${selection.ganache.nome}.
@@ -45,7 +43,6 @@ Bombom de ${selection.chocolate.nome}, com ${selection.ganache.nome}.
 - Uma mesa branca embaixo e nenhum outro objeto adicional na foto gerada.
 - Para referência de tamanho e formato, utilize a imagem a seguir (https://cococher.com/cdn/shop/files/Cococher_Cinnamon_Churro_open.jpg?v=1717892376&width=800)`;
     } else {
-      // Prompt para bombom com geleia
       return `Gere uma imagem de:
 
 Bombom de ${selection.chocolate.nome} com ${selection.ganache.nome} e ${selection.geleia?.nome}.
@@ -82,7 +79,7 @@ Bombom de ${selection.chocolate.nome} com ${selection.ganache.nome} e ${selectio
     try {
       const prompt = generatePrompt();
       
-        const { error } = await supabase
+      const { error } = await supabase
         .from('bombons')
         .insert({
           user_id: user.id,
@@ -171,7 +168,7 @@ Bombom de ${selection.chocolate.nome} com ${selection.ganache.nome} e ${selectio
           <CardTitle>Preview do Bombom</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="bg-gradient-to-br from-background to-muted rounded-lg h-64 flex items-center justify-center border-2 border-dashed border-border overflow-hidden">
+          <div className="bg-gradient-to-br from-background to-muted rounded-lg aspect-square w-full max-w-xl mx-auto flex items-center justify-center border-2 border-dashed border-border overflow-hidden">
             {generatedImageUrl ? (
               <img 
                 src={generatedImageUrl} 
@@ -185,6 +182,21 @@ Bombom de ${selection.chocolate.nome} com ${selection.ganache.nome} e ${selectio
               </div>
             )}
           </div>
+
+          {/* Texto informativo abaixo da imagem */}
+          <p className="text-xs text-muted-foreground text-center mt-3">
+            A imagem acima é gerada através de <strong>Inteligência Artificial</strong>. 
+            É apenas um esboço de como será seu bombom. 
+            Se tiver qualquer dúvida, fale conosco pelo WhatsApp:{" "}
+            <a 
+              href="https://wa.me/5519996594881" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-primary underline"
+            >
+              (19) 9-9659-4881
+            </a>.
+          </p>
         </CardContent>
       </Card>
 
