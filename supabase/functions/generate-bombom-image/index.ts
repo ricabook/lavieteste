@@ -13,15 +13,10 @@ serve(async (req) => {
   }
 
   try {
-    console.log("Edge function called with method:", req.method)
-    
-    const FAL_API_KEY = Deno.env.get('FAL_API_KEY')
-    if (!FAL_API_KEY) {
-      console.error('FAL_API_KEY is not set in environment')
-      throw new Error('FAL_API_KEY is not set')
+    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY')
+    if (!OPENAI_API_KEY) {
+      throw new Error('OPENAI_API_KEY is not set')
     }
-    
-    console.log("FAL_API_KEY found, length:", FAL_API_KEY.length)
 
     const { prompt } = await req.json()
     
@@ -83,70 +78,45 @@ serve(async (req) => {
 
     console.log("Translated prompt:", englishPrompt)
 
-    // Call fal.ai API for image generation
-    const response = await fetch('https://fal.run/fal-ai/flux/schnell', {
+    // Call OpenAI API for image generation
+    const response = await fetch('https://api.openai.com/v1/images/generations', {
       method: 'POST',
       headers: {
-        'Authorization': `Key ${FAL_API_KEY}`,
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
+        model: 'dall-e-3',
         prompt: englishPrompt,
-        image_size: "square_hd",
-        num_inference_steps: 4,
-        num_images: 1,
-        enable_safety_checker: true
+        n: 1,
+        size: '1024x1024',
+        quality: 'standard',
+        response_format: 'b64_json'
       })
     })
 
-    console.log("fal.ai response status:", response.status)
+    console.log("OpenAI response status:", response.status)
     
     if (!response.ok) {
       const errorData = await response.text()
-      console.error('fal.ai error details:', errorData)
-      throw new Error(`fal.ai API error: ${response.status} - ${errorData}`)
+      console.error('OpenAI error details:', errorData)
+      throw new Error(`OpenAI API error: ${response.status} - ${errorData}`)
     }
 
     const data = await response.json()
-    console.log("fal.ai response received, data keys:", Object.keys(data))
+    console.log("OpenAI response received, data keys:", Object.keys(data))
     
-    if (!data.images || data.images.length === 0) {
-      console.error('No images array in response:', data)
-      throw new Error('No image data returned from fal.ai')
+    if (!data.data || data.data.length === 0) {
+      console.error('No data array in response:', data)
+      throw new Error('No image data returned from OpenAI')
     }
     
-    if (!data.images[0].url) {
-      console.error('No URL in first image item:', data.images[0])
-      throw new Error('No image URL in response')
+    if (!data.data[0].b64_json) {
+      console.error('No b64_json in first data item:', data.data[0])
+      throw new Error('No base64 image data in response')
     }
     
-    const imageUrl = data.images[0].url
-    console.log("Image URL received:", imageUrl)
-    
-    // Download the image and convert to base64
-    console.log("Downloading image from URL...")
-    const imageResponse = await fetch(imageUrl)
-    console.log("Image download response status:", imageResponse.status)
-    
-    if (!imageResponse.ok) {
-      throw new Error(`Failed to download image: ${imageResponse.status}`)
-    }
-    
-    const imageBuffer = await imageResponse.arrayBuffer()
-    console.log("Image buffer size:", imageBuffer.byteLength)
-    
-    // Convert to base64 using a more reliable method for Deno
-    const uint8Array = new Uint8Array(imageBuffer)
-    const chunks = []
-    const chunkSize = 0x8000 // 32KB chunks
-    
-    for (let i = 0; i < uint8Array.length; i += chunkSize) {
-      const chunk = uint8Array.subarray(i, Math.min(i + chunkSize, uint8Array.length))
-      chunks.push(String.fromCharCode.apply(null, Array.from(chunk)))
-    }
-    
-    const imageBase64 = btoa(chunks.join(''))
-    console.log("Base64 conversion completed, length:", imageBase64.length)
+    const imageBase64 = data.data[0].b64_json
     
     return new Response(
       JSON.stringify({ 
