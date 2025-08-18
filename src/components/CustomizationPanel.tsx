@@ -1,13 +1,17 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import useCustomizationOptions from "@/hooks/useCustomizationOptions";
 
+interface Entity { id: string; nome: string }
+interface Cor extends Entity { codigo_hex: string }
+
 interface Selection {
-  chocolate?: { id: string; nome: string };
-  base?: { id: string; nome: string };
-  ganache?: { id: string; nome: string };
-  geleia?: { id: string; nome: string };
-  cor?: { id: string; nome: string; codigo_hex: string };
+  chocolate?: Entity;
+  base?: Entity;
+  ganache?: Entity;
+  geleia?: Entity;
+  cor?: Cor;
 }
 
 interface CustomizationPanelProps {
@@ -19,85 +23,112 @@ const CustomizationPanel = ({ selection, onSelectionChange }: CustomizationPanel
   const { options, loading } = useCustomizationOptions();
 
   if (loading) {
-    return (
-      <div className="space-y-6">
-        <div className="animate-pulse space-y-4">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-32 bg-muted rounded-lg"></div>
-          ))}
-        </div>
-      </div>
-    );
+    return <div className="text-sm text-muted-foreground">Carregando opções…</div>;
   }
 
-  const renderOptionSection = (
-    title: string,
-    options: Array<{ id: string; nome: string; codigo_hex?: string }>,
-    selectedValue: any,
-    onSelect: (option: any) => void
+  const byId = <T extends { id: string }>(arr: T[] | undefined, id?: string) =>
+    (arr || []).find(o => o.id === id);
+
+  const renderDropdown = (
+    label: string,
+    items: Entity[],
+    selected?: Entity,
+    onChange?: (v?: Entity) => void
   ) => (
-    <Card key={title}>
-      <CardHeader>
-        <CardTitle className="text-lg">{title}</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-2">
-        <div className="grid grid-cols-1 gap-2">
-          {options.map((option) => (
-            <Button
-              key={option.id}
-              variant={selectedValue?.id === option.id ? "default" : "outline"}
-              className="justify-start h-auto py-3 px-4"
-              onClick={() => onSelect(option)}
-            >
-              {option.codigo_hex && (
-                <div 
-                  className="w-4 h-4 rounded mr-2 border border-border"
-                  style={{ backgroundColor: option.codigo_hex }}
-                />
-              )}
-              {option.nome}
-            </Button>
+    <div className="space-y-2">
+      <Label className="text-sm font-medium">{label}</Label>
+      <Select
+        value={selected?.id ?? ""}
+        onValueChange={(id) => onChange?.(byId(items, id))}
+      >
+        <SelectTrigger className="w-full">
+          <SelectValue placeholder={`Selecione ${label.toLowerCase()}`} />
+        </SelectTrigger>
+        <SelectContent>
+          {items.map((opt) => (
+            <SelectItem key={opt.id} value={opt.id}>
+              {opt.nome}
+            </SelectItem>
           ))}
-        </div>
-      </CardContent>
-    </Card>
+        </SelectContent>
+      </Select>
+    </div>
+  );
+
+  const renderCores = (
+    label: string,
+    cores: Cor[],
+    selected?: Cor,
+    onChange?: (v?: Cor) => void
+  ) => (
+    <div className="space-y-2">
+      <Label className="text-sm font-medium">{label}</Label>
+      <div className="grid grid-cols-6 gap-3">
+        {(cores || []).map((c) => {
+          const active = c.id === selected?.id;
+          return (
+            <button
+              type="button"
+              key={c.id}
+              onClick={() => onChange?.(c)}
+              title={c.nome}
+              className={[
+                "relative h-10 w-10 rounded-full border transition",
+                active ? "ring-2 ring-offset-2 ring-primary border-primary" : "border-muted-foreground/30"
+              ].join(" ")}
+              aria-pressed={active}
+            >
+              <span
+                className="absolute inset-0 rounded-full"
+                style={{ backgroundColor: c.codigo_hex }}
+                aria-hidden="true"
+              />
+              <span className="sr-only">{c.nome}</span>
+            </button>
+          );
+        })}
+      </div>
+      {selected ? (
+        <div className="text-xs text-muted-foreground">Selecionado: {selected.nome}</div>
+      ) : null}
+    </div>
   );
 
   return (
     <div className="space-y-6">
-      {renderOptionSection(
-        "Tipo de Chocolate", 
-        options.chocolates, 
-        selection.chocolate, 
-        (chocolate) => onSelectionChange({ ...selection, chocolate })
+      {renderDropdown(
+        "Tipo de Chocolate",
+        options.chocolates || [],
+        selection.chocolate,
+        (v) => onSelectionChange({ ...selection, chocolate: v })
       )}
 
-      {renderOptionSection(
-        "Base do Bombom", 
-        options.bases, 
-        selection.base, 
-        (base) => onSelectionChange({ ...selection, base })
+      {renderDropdown(
+        "Base do Bombom",
+        options.bases || [],
+        selection.base,
+        (v) => onSelectionChange({ ...selection, base: v })
       )}
 
-      {renderOptionSection(
-        "Ganache", 
-        options.ganaches, 
-        selection.ganache, 
-        (ganache) => onSelectionChange({ ...selection, ganache })
+      {renderDropdown(
+        "Ganache",
+        options.ganaches || [],
+        selection.ganache,
+        (v) => onSelectionChange({ ...selection, ganache: v })
       )}
 
-      {renderOptionSection(
-        "Geleia", 
-        options.geleias, 
-        selection.geleia, 
-        (geleia) => onSelectionChange({ ...selection, geleia })
+      {renderDropdown(
+        "Geléia",
+        options.geleias || [],
+        selection.geleia,
+        (v) => onSelectionChange({ ...selection, geleia: v })
       )}
 
-      {renderOptionSection(
-        "Cor da Casquinha", 
-        options.cores, 
-        selection.cor, 
-        (cor) => onSelectionChange({ ...selection, cor })
+      {renderCores(
+        "Cor da Casquinha",
+        (options.cores || []) as Cor[],
+        selection.cor as Cor | undefined,
+        (v) => onSelectionChange({ ...selection, cor: v })
       )}
     </div>
   );
