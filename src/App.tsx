@@ -15,18 +15,24 @@ const queryClient = new QueryClient();
 const ProtectedRoute = ({ children, requireAdmin = false }: { children: React.ReactNode; requireAdmin?: boolean }) => {
   const { user, isAdmin, loading } = useAuth();
 
+  console.log('ProtectedRoute - user:', user?.id, 'isAdmin:', isAdmin, 'loading:', loading, 'requireAdmin:', requireAdmin);
+
   if (loading) {
+    console.log('ProtectedRoute - still loading');
     return <div className="min-h-screen bg-background flex items-center justify-center">Carregando...</div>;
   }
 
   if (!user) {
+    console.log('ProtectedRoute - no user, redirecting to /');
     return <Navigate to="/" replace />;
   }
 
   if (requireAdmin && !isAdmin) {
+    console.log('ProtectedRoute - admin required but user is not admin, redirecting to /dashboard');
     return <Navigate to="/dashboard" replace />;
   }
 
+  console.log('ProtectedRoute - access granted');
   return <>{children}</>;
 };
 

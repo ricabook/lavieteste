@@ -8,6 +8,7 @@ const Header = () => {
   const [authDialogOpen, setAuthDialogOpen] = useState(false);
   const [authMode, setAuthMode] = useState<"login" | "register">("login");
   const { user, isAdmin, signOut } = useAuth();
+  console.log('Header - user:', user?.id, 'isAdmin:', isAdmin);
   const { toast } = useToast();
 
   const handleOpenAuth = (mode: "login" | "register") => {

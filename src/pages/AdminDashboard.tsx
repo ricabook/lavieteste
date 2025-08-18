@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import useAuth from "@/hooks/useAuth";
+import OptionsManager from "@/components/OptionsManager";
 
 interface Bombon {
   id: string;
@@ -212,9 +213,7 @@ const AdminDashboard = () => {
               <CardTitle>Gerenciar Opções de Bombons</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground">
-                Funcionalidade de gerenciamento de opções será implementada em breve.
-              </p>
+              <OptionsManager />
             </CardContent>
           </Card>
         </TabsContent>
