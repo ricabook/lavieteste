@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import useAuth from "@/hooks/useAuth";
@@ -19,6 +22,10 @@ interface PreviewAreaProps {
 
 const PreviewArea = ({ selection }: PreviewAreaProps) => {
   const [isGenerating, setIsGenerating] = useState(false);
+  const [showGuestDialog, setShowGuestDialog] = useState(false);
+  const [guestNome, setGuestNome] = useState("");
+  const [guestWhats, setGuestWhats] = useState("");
+
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string>("");
   const [imageBase64, setImageBase64] = useState<string>("");
@@ -44,16 +51,8 @@ Foto hiper-realista, em estúdio profissional, de bombons artesanais de ${select
     }
   };
 
-  const handleSendToProduction = async () => {
-    if (!user) {
-      toast({
-        title: "Login necessário",
-        description: "Você precisa fazer login para enviar bombons para produção.",
-        variant: "destructive",
-      });
-      return;
-    }
-
+  
+const handleSendToProduction = async () => {
     if (!selection.chocolate || !selection.base || !selection.ganache || !selection.cor) {
       toast({
         title: "Seleção incompleta",
@@ -63,27 +62,38 @@ Foto hiper-realista, em estúdio profissional, de bombons artesanais de ${select
       return;
     }
 
+    if (!user) {
+      // Abre diálogo para coletar dados do convidado
+      setShowGuestDialog(true);
+      return;
+    }
+
+    // Usuário logado segue fluxo direto
     setIsGenerating(true);
-    
     try {
       const prompt = generatePrompt();
-      
-      const { error } = await supabase
-        .from('bombons')
-        .insert({
-          user_id: user.id,
+      const payload = {
+        selection: {
           chocolate_id: selection.chocolate.id,
-          base_id: selection.base.id,
+          base_id: selection.base?.id || null,
           ganache_id: selection.ganache.id,
           geleia_id: selection.geleia?.id || null,
           cor_id: selection.cor.id,
-          prompt_gerado: prompt,
-          url_imagem: generatedImageUrl || null,
-          status: 'enviado'
-        });
+        },
+        prompt,
+        url_imagem: generatedImageUrl || null,
+        user_id: user.id,
+      };
 
-      if (error) {
-        throw error;
+      const res = await fetch(`${supabase.headers.get("x-supabase-url") || "https://cgbtlpipjxnbhugzulzl.supabase.co"}/functions/v1/submit-bombom`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Falha ao enviar.");
       }
 
       toast({
@@ -102,7 +112,67 @@ Foto hiper-realista, em estúdio profissional, de bombons artesanais de ${select
     }
   };
 
+
   const handleGenerateImage = async () => {
+
+  const submitGuestOrder = async () => {
+    if (!guestNome.trim() || !guestWhats.trim()) {
+      toast({
+        title: "Dados obrigatórios",
+        description: "Informe nome e WhatsApp para continuar.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsGenerating(true);
+    try {
+      const prompt = generatePrompt();
+      const payload = {
+        selection: {
+          chocolate_id: selection.chocolate!.id,
+          base_id: selection.base?.id || null,
+          ganache_id: selection.ganache!.id,
+          geleia_id: selection.geleia?.id || null,
+          cor_id: selection.cor!.id,
+        },
+        prompt,
+        url_imagem: generatedImageUrl || null,
+        guest_nome: guestNome.trim(),
+        guest_telefone: guestWhats.trim(),
+      };
+
+      const res = await fetch(`${supabase.headers.get("x-supabase-url") || "https://cgbtlpipjxnbhugzulzl.supabase.co"}/functions/v1/submit-bombom`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Falha ao enviar.");
+      }
+
+      setShowGuestDialog(false);
+      setGuestNome("");
+      setGuestWhats("");
+
+      toast({
+        title: "Enviado para produção!",
+        description: "Seu bombom foi enviado com seus dados de contato (sem login).",
+      });
+    } catch (error) {
+      console.error("Guest submit error:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível enviar. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
     if (!selection.chocolate || !selection.base || !selection.ganache || !selection.cor) {
       toast({
         title: "Seleção incompleta",
@@ -232,15 +302,47 @@ Foto hiper-realista, em estúdio profissional, de bombons artesanais de ${select
               size="lg"
               variant="outline"
               onClick={handleSendToProduction}
-              disabled={isGenerating || !user || !generatedImageUrl}
+              disabled={isGenerating || !generatedImageUrl}
             >
               {isGenerating ? "Enviando..." : "Enviar para Produção"}
             </Button>
           </div>
-        </CardContent>
+        
+</CardContent>
       </Card>
+
+      {/* Dialog para convidados (sem login) */}
+      <Dialog open={showGuestDialog} onOpenChange={setShowGuestDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Seus dados para produção</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Input
+              placeholder="Seu nome completo"
+              value={guestNome}
+              onChange={(e) => setGuestNome(e.target.value)}
+            />
+            <Input
+              placeholder="WhatsApp (com DDD)"
+              value={guestWhats}
+              onChange={(e) => setGuestWhats(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              Usaremos esses dados apenas para entrar em contato sobre o seu pedido.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowGuestDialog(false)}>Cancelar</Button>
+            <Button onClick={submitGuestOrder} disabled={isGenerating}>
+              {isGenerating ? "Enviando..." : "Confirmar envio"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
+
 
 export default PreviewArea;
