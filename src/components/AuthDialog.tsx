@@ -10,14 +10,15 @@ import { useToast } from "@/hooks/use-toast";
 import useAuth from "@/hooks/useAuth";
 
 const authSchema = z.object({
-  identificador: z.string().min(3, "Digite seu email ou telefone"),
+  nome: z.string().optional(),
+  telefone: z.string().optional(),
+  email: z.string().email("Email inválido"),
   senha: z.string().min(6, "Senha deve ter pelo menos 6 caracteres"),
 });
 
-const registerSchema = z.object({
-  nome: z.string().min(2, "Nome obrigatório"),
-  telefone: z.string().min(8, "Telefone obrigatório"),
-  senha: z.string().min(6, "Senha deve ter pelo menos 6 caracteres"),
+const registerSchema = authSchema.extend({
+  nome: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
+  telefone: z.string().min(10, "Telefone deve ter pelo menos 10 dígitos"),
 });
 
 type AuthFormData = z.infer<typeof authSchema>;
@@ -38,40 +39,40 @@ const AuthDialog = ({ open, onOpenChange, mode }: AuthDialogProps) => {
     defaultValues: {
       nome: "",
       telefone: "",
-      identificador: "",
+      email: "",
       senha: "",
     },
   });
 
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: AuthFormData) => {
     setIsLoading(true);
     try {
       let result;
       if (mode === "register") {
-        result = await signUp(data.nome || "", data.telefone || "", data.senha);
+        result = await signUp(data.nome || "", data.telefone || "", data.email, data.senha);
       } else {
-        // data.identificador pode ser email ou telefone
-        result = await signIn(data.identificador, data.senha);
+        result = await signIn(data.email, data.senha);
       }
 
       if (result.error) {
         toast({
           title: "Erro",
-          description: result.error.message || "Não foi possível completar a ação.",
+          description: result.error.message,
+          variant: "destructive",
         });
       } else {
         toast({
-          title: mode === "register" ? "Cadastro realizado!" : "Login realizado!",
-          description: mode === "register"
-            ? "Use seu telefone e senha para entrar."
-            : "Bem-vindo de volta!",
+          title: "Sucesso",
+          description: mode === "register" ? "Conta criada com sucesso!" : "Login realizado com sucesso!",
         });
         onOpenChange(false);
+        form.reset();
       }
-    } catch (err: any) {
+    } catch (error) {
       toast({
-        title: "Erro inesperado",
-        description: err?.message || "Verifique sua conexão e tente novamente.",
+        title: "Erro",
+        description: "Ocorreu um erro inesperado.",
+        variant: "destructive",
       });
     } finally {
       setIsLoading(false);
@@ -82,13 +83,16 @@ const AuthDialog = ({ open, onOpenChange, mode }: AuthDialogProps) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{isLogin ? "Entrar" : "Criar conta"}</DialogTitle>
-          <DialogDescription>
-            {isLogin
-              ? "Faça login com email ou telefone e sua senha."
-              : "Preencha seu nome, telefone e crie uma senha."}
+          <DialogTitle className="text-xl font-semibold text-center">
+            {isLogin ? "Entrar" : "Cadastrar"}
+          </DialogTitle>
+          <DialogDescription className="text-center text-muted-foreground">
+            {isLogin 
+              ? "Entre com seus dados para acessar sua conta"
+              : "Crie sua conta para salvar suas criações"
+            }
           </DialogDescription>
         </DialogHeader>
 
@@ -114,26 +118,24 @@ const AuthDialog = ({ open, onOpenChange, mode }: AuthDialogProps) => {
               />
             )}
 
-            {isLogin && (
-              <FormField
-                control={form.control}
-                name="identificador"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email ou Telefone</FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder="seu@email.com ou (11) 99999-9999" 
-                        type="text"
-                        {...field} 
-                        disabled={isLoading}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="email"
+                      placeholder="Digite seu email" 
+                      {...field} 
+                      disabled={isLoading}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             {!isLogin && (
               <FormField
@@ -174,7 +176,7 @@ const AuthDialog = ({ open, onOpenChange, mode }: AuthDialogProps) => {
               )}
             />
 
-            <div className="pt-2">
+            <div className="flex flex-col space-y-2 pt-4">
               <Button 
                 type="submit" 
                 className="w-full" 
