@@ -101,18 +101,21 @@ export type Database = {
           created_at: string
           id: string
           nome: string
+          ordem: number | null
         }
         Insert: {
           ativo?: boolean | null
           created_at?: string
           id?: string
           nome: string
+          ordem?: number | null
         }
         Update: {
           ativo?: boolean | null
           created_at?: string
           id?: string
           nome?: string
+          ordem?: number | null
         }
         Relationships: []
       }
@@ -122,18 +125,21 @@ export type Database = {
           created_at: string
           id: string
           nome: string
+          ordem: number | null
         }
         Insert: {
           ativo?: boolean | null
           created_at?: string
           id?: string
           nome: string
+          ordem?: number | null
         }
         Update: {
           ativo?: boolean | null
           created_at?: string
           id?: string
           nome?: string
+          ordem?: number | null
         }
         Relationships: []
       }
@@ -144,6 +150,7 @@ export type Database = {
           created_at: string
           id: string
           nome: string
+          ordem: number | null
         }
         Insert: {
           ativo?: boolean | null
@@ -151,6 +158,7 @@ export type Database = {
           created_at?: string
           id?: string
           nome: string
+          ordem?: number | null
         }
         Update: {
           ativo?: boolean | null
@@ -158,6 +166,7 @@ export type Database = {
           created_at?: string
           id?: string
           nome?: string
+          ordem?: number | null
         }
         Relationships: []
       }
@@ -167,18 +176,21 @@ export type Database = {
           created_at: string
           id: string
           nome: string
+          ordem: number | null
         }
         Insert: {
           ativo?: boolean | null
           created_at?: string
           id?: string
           nome: string
+          ordem?: number | null
         }
         Update: {
           ativo?: boolean | null
           created_at?: string
           id?: string
           nome?: string
+          ordem?: number | null
         }
         Relationships: []
       }
@@ -188,18 +200,21 @@ export type Database = {
           created_at: string
           id: string
           nome: string
+          ordem: number | null
         }
         Insert: {
           ativo?: boolean | null
           created_at?: string
           id?: string
           nome: string
+          ordem?: number | null
         }
         Update: {
           ativo?: boolean | null
           created_at?: string
           id?: string
           nome?: string
+          ordem?: number | null
         }
         Relationships: []
       }

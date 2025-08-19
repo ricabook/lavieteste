@@ -23,11 +23,11 @@ const useCustomizationOptions = () => {
     const fetchOptions = async () => {
       try {
         const [chocolates, bases, ganaches, geleias, cores] = await Promise.all([
-          supabase.from('opcoes_chocolate').select('id, nome').eq('ativo', true),
-          supabase.from('opcoes_base').select('id, nome').eq('ativo', true),
-          supabase.from('opcoes_ganache').select('id, nome').eq('ativo', true),
-          supabase.from('opcoes_geleia').select('id, nome').eq('ativo', true),
-          supabase.from('opcoes_cor').select('id, nome, codigo_hex').eq('ativo', true),
+          supabase.from('opcoes_chocolate').select('id, nome').eq('ativo', true).order('ordem'),
+          supabase.from('opcoes_base').select('id, nome').eq('ativo', true).order('ordem'),
+          supabase.from('opcoes_ganache').select('id, nome').eq('ativo', true).order('ordem'),
+          supabase.from('opcoes_geleia').select('id, nome').eq('ativo', true).order('ordem'),
+          supabase.from('opcoes_cor').select('id, nome, codigo_hex').eq('ativo', true).order('ordem'),
         ]);
 
         console.log('Fetched options:', { chocolates, bases, ganaches, geleias, cores });

@@ -8,15 +8,34 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Plus, Edit, Trash2 } from "lucide-react";
+import { Plus, Edit, Trash2, GripVertical } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import {
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface Option {
   id: string;
   nome: string;
   ativo: boolean;
   codigo_hex?: string;
+  ordem: number;
 }
 
 interface OptionsData {
@@ -47,11 +66,11 @@ const OptionsManager = () => {
   const fetchAllOptions = async () => {
     try {
       const [chocolates, bases, ganaches, geleias, cores] = await Promise.all([
-        supabase.from('opcoes_chocolate').select('*').order('nome'),
-        supabase.from('opcoes_base').select('*').order('nome'),
-        supabase.from('opcoes_ganache').select('*').order('nome'),
-        supabase.from('opcoes_geleia').select('*').order('nome'),
-        supabase.from('opcoes_cor').select('*').order('nome')
+        supabase.from('opcoes_chocolate').select('*').order('ordem'),
+        supabase.from('opcoes_base').select('*').order('ordem'),
+        supabase.from('opcoes_ganache').select('*').order('ordem'),
+        supabase.from('opcoes_geleia').select('*').order('ordem'),
+        supabase.from('opcoes_cor').select('*').order('ordem')
       ]);
 
       setOptions({
@@ -84,6 +103,12 @@ const OptionsManager = () => {
 
     if (type === 'cores') {
       optionData.codigo_hex = formData.get('codigo_hex') as string;
+    }
+
+    // For new items, set ordem to be at the end
+    if (!isEditing) {
+      const currentOptions = options[type as keyof OptionsData];
+      optionData.ordem = currentOptions.length;
     }
 
     try {
@@ -208,6 +233,157 @@ const OptionsManager = () => {
     setIsDialogOpen(true);
   };
 
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = async (event: any, type: string) => {
+    const { active, over } = event;
+
+    if (active.id !== over.id) {
+      const currentOptions = options[type as keyof OptionsData];
+      const oldIndex = currentOptions.findIndex((item) => item.id === active.id);
+      const newIndex = currentOptions.findIndex((item) => item.id === over.id);
+
+      const newOptions = arrayMove(currentOptions, oldIndex, newIndex);
+      
+      // Update local state immediately
+      setOptions(prev => ({
+        ...prev,
+        [type]: newOptions
+      }));
+
+      // Update database with new order
+      try {
+        const updates = newOptions.map((option, index) => ({
+          id: option.id,
+          ordem: index
+        }));
+
+        for (const update of updates) {
+          let result;
+          if (type === 'chocolates') {
+            result = await supabase.from('opcoes_chocolate').update({ ordem: update.ordem }).eq('id', update.id);
+          } else if (type === 'bases') {
+            result = await supabase.from('opcoes_base').update({ ordem: update.ordem }).eq('id', update.id);
+          } else if (type === 'ganaches') {
+            result = await supabase.from('opcoes_ganache').update({ ordem: update.ordem }).eq('id', update.id);
+          } else if (type === 'geleias') {
+            result = await supabase.from('opcoes_geleia').update({ ordem: update.ordem }).eq('id', update.id);
+          } else if (type === 'cores') {
+            result = await supabase.from('opcoes_cor').update({ ordem: update.ordem }).eq('id', update.id);
+          }
+          
+          if (result?.error) throw result.error;
+        }
+
+        toast({
+          title: "Sucesso",
+          description: "Ordem atualizada com sucesso."
+        });
+      } catch (error) {
+        console.error('Error updating order:', error);
+        toast({
+          variant: "destructive",
+          title: "Erro",
+          description: "Erro ao atualizar ordem."
+        });
+        // Revert local state on error
+        fetchAllOptions();
+      }
+    }
+  };
+
+  const SortableOptionItem = ({ option, type }: { option: Option; type: string }) => {
+    const {
+      attributes,
+      listeners,
+      setNodeRef,
+      transform,
+      transition,
+    } = useSortable({ id: option.id });
+
+    const style = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+    };
+
+    return (
+      <div
+        ref={setNodeRef}
+        style={style}
+        className="flex items-center justify-between p-3 border rounded-lg bg-background"
+      >
+        <div className="flex items-center gap-3">
+          <div
+            {...attributes}
+            {...listeners}
+            className="cursor-grab active:cursor-grabbing p-1 hover:bg-muted rounded"
+          >
+            <GripVertical size={16} className="text-muted-foreground" />
+          </div>
+          {type === 'cores' && option.codigo_hex && (
+            <div 
+              className="w-6 h-6 rounded border"
+              style={{ backgroundColor: option.codigo_hex }}
+            />
+          )}
+          <div>
+            <span className="font-medium">{option.nome}</span>
+            {type === 'cores' && option.codigo_hex && (
+              <span className="text-sm text-muted-foreground ml-2">
+                {option.codigo_hex}
+              </span>
+            )}
+          </div>
+          <Badge variant={option.ativo ? "default" : "secondary"}>
+            {option.ativo ? "Ativo" : "Inativo"}
+          </Badge>
+        </div>
+        <div className="flex items-center gap-2">
+          <Switch
+            checked={option.ativo}
+            onCheckedChange={() => handleToggleActive(type, option)}
+          />
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => openEditDialog(type, option)}
+          >
+            <Edit size={14} />
+          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button size="sm" variant="destructive">
+                <Trash2 size={14} />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Tem certeza que deseja excluir "{option.nome}"? Esta ação não pode ser desfeita.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => handleDeleteOption(type, option.id)}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  Excluir
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      </div>
+    );
+  };
+
   const OptionCard = ({ type, options: typeOptions, title }: { type: string; options: Option[]; title: string }) => (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
@@ -228,66 +404,19 @@ const OptionsManager = () => {
               Nenhuma opção cadastrada
             </p>
           ) : (
-            typeOptions.map((option) => (
-              <div key={option.id} className="flex items-center justify-between p-3 border rounded-lg">
-                <div className="flex items-center gap-3">
-                  {type === 'cores' && option.codigo_hex && (
-                    <div 
-                      className="w-6 h-6 rounded border"
-                      style={{ backgroundColor: option.codigo_hex }}
-                    />
-                  )}
-                  <div>
-                    <span className="font-medium">{option.nome}</span>
-                    {type === 'cores' && option.codigo_hex && (
-                      <span className="text-sm text-muted-foreground ml-2">
-                        {option.codigo_hex}
-                      </span>
-                    )}
-                  </div>
-                  <Badge variant={option.ativo ? "default" : "secondary"}>
-                    {option.ativo ? "Ativo" : "Inativo"}
-                  </Badge>
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={(event) => handleDragEnd(event, type)}
+            >
+              <SortableContext items={typeOptions} strategy={verticalListSortingStrategy}>
+                <div className="space-y-2">
+                  {typeOptions.map((option) => (
+                    <SortableOptionItem key={option.id} option={option} type={type} />
+                  ))}
                 </div>
-                <div className="flex items-center gap-2">
-                  <Switch
-                    checked={option.ativo}
-                    onCheckedChange={() => handleToggleActive(type, option)}
-                  />
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => openEditDialog(type, option)}
-                  >
-                    <Edit size={14} />
-                  </Button>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button size="sm" variant="destructive">
-                        <Trash2 size={14} />
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Tem certeza que deseja excluir "{option.nome}"? Esta ação não pode ser desfeita.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={() => handleDeleteOption(type, option.id)}
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        >
-                          Excluir
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
-              </div>
-            ))
+              </SortableContext>
+            </DndContext>
           )}
         </div>
       </CardContent>

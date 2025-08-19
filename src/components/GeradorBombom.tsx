@@ -21,7 +21,7 @@ export default function GeradorBombom({ selecao, aspectRatio = '1:1', outputForm
   return (
     <div className="space-y-4">
       <button
-        onClick={() => gerar(selecao, { aspectRatio, outputFormat, model })}
+        onClick={() => gerar(selecao)}
         disabled={loading}
         className="px-4 py-2 rounded-xl bg-rose-600 text-white hover:bg-rose-700 disabled:opacity-50"
       >
