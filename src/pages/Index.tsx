@@ -19,19 +19,19 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       <main className="max-w-7xl mx-auto px-6 py-8">
         <div className="grid lg:grid-cols-2 gap-8">
-          {/* Left Column - Customization Panel */}
-          <div className="order-2 lg:order-1">
+          {/* Coluna de Opções — deve vir primeiro no mobile */}
+          <div className="order-1 lg:order-1">
             <h2 className="text-2xl font-bold mb-6 text-foreground">
               Monte seu Bombom
             </h2>
-            <CustomizationPanel 
-              selection={selection} 
-              onSelectionChange={setSelection} 
+            <CustomizationPanel
+              selection={selection}
+              onSelectionChange={setSelection}
             />
           </div>
-          
-          {/* Right Column - Preview Area */}
-          <div className="order-1 lg:order-2">
+
+          {/* Coluna de Preview + Resumo — vem depois no mobile */}
+          <div className="order-2 lg:order-2">
             <h2 className="text-2xl font-bold mb-6 text-foreground">
               Seu Bombom
             </h2>

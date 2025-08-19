@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import AuthDialog from "./AuthDialog";
 import useAuth from "@/hooks/useAuth";
+import { Link } from "react-router-dom";
 
 const Header = () => {
   const [authDialogOpen, setAuthDialogOpen] = useState(false);
@@ -26,12 +27,14 @@ const Header = () => {
   return (
     <header className="bg-card border-b border-border px-6 py-4">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
-        {/* Novo logotipo */}
-        <img 
-          src="/logo.png" 
-          alt="La Vie" 
-          className="h-10"
-        />
+{/* Novo logotipo com link para a página inicial */}
+<Link to="/" aria-label="Ir para a página inicial">
+  <img 
+    src="/logo.png" 
+    alt="La Vie - Página inicial" 
+    className="h-20 w-auto"
+  />
+</Link>
 
         <div className="flex items-center space-x-3">
           {user && (

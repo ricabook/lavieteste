@@ -33,14 +33,16 @@ const PreviewArea = ({ selection }: PreviewAreaProps) => {
     const hasGeleia = selection.geleia && selection.geleia.nome !== "Sem Geleia";
     
     if (!hasGeleia) {
-      return `Gere uma imagem de:
-
-Foto hiper-realista, em estúdio profissional, de bombons artesanais de ${selection.chocolate.nome}, formato arredondado e brilhante. A casquinha externa está pintada de forma uniforme e completa de ${selection.cor.nome} brilhante. Um dos bombons está cortado ao meio, exibindo o interior com apenas uma camada: da base ao topo, uma única camada cremosa de ${selection.ganache.nome}. Iluminação suave de estúdio, fundo neutro acinzentado, foco nítido e textura detalhada do chocolate e do recheio. Estilo fotográfico realista, como se fosse capturado com uma câmera Canon em estúdio de fotografia gastronômica. Sem textos ou objetos adicionais na cena, apenas os bombons centralizados.`;      
+      return `Gerar uma foto hiper-realista, em estúdio profissional, de bombons artesanais de ${selection.chocolate.nome}, formato arredondado e brilhante. A casquinha externa está pintada de forma uniforme e completa de ${selection.cor.nome} absoluto. 
+Um dos bombons está cortado ao meio, exibindo o interior com uma camada: da base ao topo, ocupando 100% da altura do bombom, uma única camada uniforme cremosa de ${selection.ganache.nome}. 
+Iluminação suave de estúdio, fundo neutro acinzentado, foco nítido e textura detalhada do chocolate e do recheio. Estilo fotográfico realista, como se fosse capturado com uma câmera Canon em estúdio de fotografia gastronômica. Sem textos ou objetos adicionais na cena, apenas os bombons centralizados.`;      
 
     } else {
-      return `Gere uma imagem de:
-
-Foto hiper-realista, em estúdio profissional, de bombons artesanais de ${selection.chocolate.nome}, formato arredondado e brilhante. A casquinha externa está pintada de forma uniforme e completa de ${selection.cor.nome} brilhante. Um dos bombons está cortado ao meio, exibindo o interior com duas camadas bem definidas: na base uma grande camada cremosa de ${selection.ganache.nome}; no topo, uma pequena camada brilhante de ${selection.geleia.nome}. Iluminação suave de estúdio, fundo neutro acinzentado, foco nítido e textura detalhada do chocolate e do recheio. Estilo fotográfico realista, como se fosse capturado com uma câmera Canon em estúdio de fotografia gastronômica. Sem textos ou objetos adicionais na cena, apenas os bombons centralizados.`;
+      return `Gerar uma foto hiper-realista, em estúdio profissional, de bombons artesanais de ${selection.chocolate.nome}, formato arredondado e brilhante. A casquinha externa está pintada de forma uniforme e completa de ${selection.cor.nome} absoluto. 
+Um dos bombons está cortado ao meio, exibindo o interior com duas camadas: 
+- Da base até 80% da altura do bombom: uma única camada uniforme cremosa de ${selection.ganache.nome}. 
+- No topo, correspondente aos 20% restantes do bombom: uma camada brilhante de ${selection.geleia.nome}.
+Iluminação suave de estúdio, fundo neutro acinzentado, foco nítido e textura detalhada do chocolate e do recheio. Estilo fotográfico realista, como se fosse capturado com uma câmera Canon em estúdio de fotografia gastronômica. Sem textos ou objetos adicionais na cena, apenas os bombons centralizados.`;
     }
   };
 
@@ -174,8 +176,8 @@ Foto hiper-realista, em estúdio profissional, de bombons artesanais de ${select
 
           {/* Texto informativo abaixo da imagem */}
           <p className="text-xs text-muted-foreground text-center mt-3">
-            A imagem acima é gerada através de <strong>Inteligência Artificial</strong>. 
-            É apenas um esboço de como será seu bombom. 
+            A imagem acima é um esboço e foi gerada através de <strong>Inteligência Artificial</strong>. 
+            O bombom final pode apresentar diferenças nas cores e texturas dos recheios.
             Se tiver qualquer dúvida, fale conosco pelo WhatsApp:{" "}
             <a 
               href="https://wa.me/5519996594881" 
