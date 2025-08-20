@@ -3,16 +3,22 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogTrigger, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { supabase } from "@/integrations/supabase/client";
 import useAuth from "@/hooks/useAuth";
 import OptionsManager from "@/components/OptionsManager";
+import { addDays } from "date-fns";
 
 interface Bombon {
   id: string;
   prompt_gerado: string;
   status: string;
   created_at: string;
-  user_id: string;
+  user_id: string | null;
+  url_imagem_base64: string | null;
+  nome_guest: string | null;
+  telefone_guest: string | null;
   opcoes_chocolate: { nome: string };
   opcoes_base: { nome: string };
   opcoes_ganache: { nome: string };
@@ -21,6 +27,13 @@ interface Bombon {
 }
 
 type ProfileRow = { user_id: string; nome: string; telefone: string };
+
+/** Garante que uma string base64 tenha prefixo data URL válido */
+function asDataUrl(b64?: string | null, mime = "image/png") {
+  if (!b64) return null;
+  if (b64.startsWith("data:")) return b64;
+  return `data:${mime};base64,${b64}`;
+}
 
 const AdminDashboard = () => {
   const [bombons, setBombons] = useState<Bombon[]>([]);
@@ -46,6 +59,9 @@ const AdminDashboard = () => {
           status,
           created_at,
           user_id,
+          url_imagem_base64,
+          nome_guest,
+          telefone_guest,
           opcoes_chocolate (nome),
           opcoes_base (nome),
           opcoes_ganache (nome),
@@ -63,7 +79,7 @@ const AdminDashboard = () => {
         return;
       }
 
-      const pedidos = (data || []) as Bombon[];
+      const pedidos = data ? (data as Bombon[]) : [];
       setBombons(pedidos);
 
       const userIds = Array.from(
@@ -126,7 +142,7 @@ const AdminDashboard = () => {
     }
   };
 
-  // EXCLUSÃO via RPC delete_bombon (Opção B)
+  // EXCLUSÃO via RPC delete_bombon
   const handleDelete = async (id: string) => {
     const ok = window.confirm(
       "Tem certeza que deseja excluir este pedido? Esta ação não pode ser desfeita."
@@ -236,6 +252,12 @@ const AdminDashboard = () => {
                   ? profilesMap[bombon.user_id]
                   : null;
 
+                // Determinar nome e telefone (profile ou guest)
+                const clienteNome = profile?.nome || bombon.nome_guest || "—";
+                const clienteTelefone = profile?.telefone || bombon.telefone_guest || "";
+
+                const imgUrl = asDataUrl(bombon.url_imagem_base64);
+
                 return (
                   <Card key={bombon.id}>
                     <CardHeader>
@@ -247,13 +269,17 @@ const AdminDashboard = () => {
 
                           <p className="text-sm text-muted-foreground">
                             <span className="font-medium">Cliente:</span>{" "}
-                            {profile?.nome || "—"}{" "}
-                            {profile?.telefone ? `— ${profile.telefone}` : ""}
+                            {clienteNome}{" "}
+                            {clienteTelefone ? `— ${clienteTelefone}` : ""}
                           </p>
 
-                          {bombon.user_id && (
+                          {bombon.user_id ? (
                             <p className="text-xs text-muted-foreground">
                               Cliente ID: {bombon.user_id}
+                            </p>
+                          ) : (
+                            <p className="text-xs text-muted-foreground">
+                              Cliente não cadastrado (pedido como visitante)
                             </p>
                           )}
                         </div>
@@ -279,6 +305,40 @@ const AdminDashboard = () => {
 
                     <CardContent>
                       <div className="space-y-4">
+                        {imgUrl && (
+                          <div className="flex justify-center">
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <button className="cursor-pointer hover:opacity-80 transition-opacity" title="Clique para ampliar" aria-label="Abrir imagem do pedido">
+                                  <img
+                                    src={imgUrl}
+                                    alt="Thumbnail do bombom gerado"
+                                    className="w-20 h-20 object-cover rounded-lg border shadow-sm"
+                                    loading="lazy"
+                                    referrerPolicy="no-referrer"
+                                    onError={(e) => { (e.currentTarget as HTMLImageElement).src = "/placeholder.png"; }}
+                                  />
+                                </button>
+                              </DialogTrigger>
+
+                              <DialogContent className="max-w-2xl">
+                                {/* Acessibilidade exigida pelo Radix */}
+                                <VisuallyHidden>
+                                  <DialogTitle>Imagem do pedido</DialogTitle>
+                                  <DialogDescription>Pré-visualização em tamanho maior da imagem gerada pela IA.</DialogDescription>
+                                </VisuallyHidden>
+
+                                <img
+                                  src={imgUrl}
+                                  alt="Imagem do bombom gerado pela IA"
+                                  className="w-full h-auto rounded-lg"
+                                  onError={(e) => { (e.currentTarget as HTMLImageElement).src = "/placeholder.png"; }}
+                                />
+                              </DialogContent>
+                            </Dialog>
+                          </div>
+                        )}
+
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                           <div>
                             <strong>Base:</strong> {bombon.opcoes_base?.nome}
@@ -321,9 +381,15 @@ const AdminDashboard = () => {
                           )}
                         </div>
 
-                        <div className="text-xs text-muted-foreground">
-                          Criado em:{" "}
-                          {new Date(bombon.created_at).toLocaleDateString("pt-BR")}
+                        <div className="text-xs text-muted-foreground space-y-1">
+                          <div>
+                            Criado em:{" "}
+                            {new Date(bombon.created_at).toLocaleDateString("pt-BR")}
+                          </div>
+                          <div>
+                            Prazo para produção:{" "}
+                            {addDays(new Date(bombon.created_at), 7).toLocaleDateString("pt-BR")}
+                          </div>
                         </div>
                       </div>
                     </CardContent>
