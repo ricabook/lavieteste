@@ -211,15 +211,7 @@ Iluminação suave de estúdio, fundo neutro acinzentado, foco nítido e textura
           <p className="text-xs text-muted-foreground text-center mt-3">
             A imagem acima é um esboço e foi gerada através de <strong>Inteligência Artificial</strong>. 
             O bombom final pode apresentar diferenças nas cores e texturas dos recheios.
-            Se tiver qualquer dúvida, fale conosco pelo WhatsApp:{" "}
-            <a 
-              href="https://wa.me/5519996594881" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-primary underline"
-            >
-              (19) 9-9659-4881
-            </a>.
+            Se tiver qualquer dúvida, fale conosco pelo WhatsApp.
           </p>
         </CardContent>
       </Card>

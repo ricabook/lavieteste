@@ -118,7 +118,7 @@ const CustomizationPanel = ({ selection, onSelectionChange }: CustomizationPanel
       )}
 
       {renderDropdown(
-        "Geléia",
+        "Geléias/Extras",
         options.geleias || [],
         selection.geleia,
         (v) => onSelectionChange({ ...selection, geleia: v })

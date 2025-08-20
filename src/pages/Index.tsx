@@ -22,7 +22,7 @@ const Index = () => {
           {/* Coluna de Opções — deve vir primeiro no mobile */}
           <div className="order-1 lg:order-1">
             <h2 className="text-2xl font-bold mb-6 text-foreground">
-              Monte seu Bombom
+              Crie seu Bombom
             </h2>
             <CustomizationPanel
               selection={selection}
@@ -33,7 +33,7 @@ const Index = () => {
           {/* Coluna de Preview + Resumo — vem depois no mobile */}
           <div className="order-2 lg:order-2">
             <h2 className="text-2xl font-bold mb-6 text-foreground">
-              Seu Bombom
+              Foto e detalhes do Bombom
             </h2>
             <PreviewArea selection={selection} />
           </div>
